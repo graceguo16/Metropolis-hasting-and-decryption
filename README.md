@@ -1,11 +1,57 @@
-# Metropolis-hasting-and-decryption
-The Metropolis-Hastings (M-H)algorithm,a Markov chain Monte Carlo(MCMC)method,is one of the most popular techniques used by statisticians today.It is primarily used as a way to simulate observations from unwieldy distributions(Hitchcock,2003).New samples are added to the sequence in two steps:first a new sample is proposed based on the previous sample,then the proposed sample is either added to the sequence or rejected depending on the value of the probability distribution at that point(Wikipedia,2005).
+Quick Test
+==========
 
-For this final project,our group chose the emphasis of Coding and aims to improve the accuracy of decrypting a message based on the Metropolis-Hastings algorithm.In the original setup,the decrypted code defines a sample space of 56 characters,consisting of lowercase and uppercase English letters only,and iteratively proposes new permutations by swapping two characters at a time to explore better likelihoods of decoded outputs.
-However,such limited permutations often fail to recover natural English phrases;for instance,a word like “while” may be incorrectly decoded as “ahile.”To address this,we propose two modifications:
+To test run the following python command.
 
-(1)in every step,we switch 5 letters in the current permutation at a time instead of 2 letters,and
+`python run_deciphering.py -i data/warpeace_input.txt -d secret_message.txt` 
 
-(2)we introduce a  temperature parameter to alter the acceptance rate.The proposal function is modified to generate more diverse  permutations,potentially improving the search efficiency and output accuracy.
+To scramble a text message contained in filename run:
 
-Preliminary testing suggests that the first modification did not improve the result of the decoding because the deciphered text was still distorted,and many common English patterns were lost;however,the second modification does help the algorithm capture common English character sequences,resulting in more readable decoded messages.
+`python scramble_text.py -i filename > output`
+
+How to run the code
+===================
+
+Well, if you already happen to have an encoded text and wish to decode it, all you need to be concerned with `run_deciphering.py`.
+Typing `python run_deciphering.py -h` would show
+
+Usage: run_deciphering.py [options]
+
+Options:
+
+  -h, --help ........... show this help message and exit
+
+  -i INPUTFILE, --input=INPUTFILE .......... input file to train the code on
+
+  -d DECODE, --decode=DECODE .......... file that needs to be decoded
+
+  -e ITERATIONS, --iters=ITERATIONS ........... number of iterations to run the algorithm for
+
+  -t TOLERANCE, --tolerance=TOLERANCE .......... percentate acceptance tolerance, before we should stop
+
+  -p PRINT_EVERY, --print_every=PRINT_EVERY ...........number of steps after which diagnostics should be printed
+
+
+
+Code Walkthrough
+============================
+The code given does correspond to our algorithm, even though the similarities may not be directly obvious.  The following correspondences might be helpful.
+
+* The entire decision on state updating given by  
+![state_decision](images/state_decision.png)  
+is handled by the line: `if p2-p1 > np.log(u)` in the `metropolis_hastings.py` file.  Note that $u$ is a random variable sampled uniformly from $(0,1)$.
+
+* This code was written by what seems to be a software engineer.  As such, many of the operations are extracted to their own methods to be as generic as possible.  It is, for instance, possible to pass in a different way to create permutations.  First, lets understand how `metropolis_hastings` knows what it needs to do this.  `metropolis_hastings` is called in the `run_deciphering.py` file (the one you actually run in python).  In it, you see: 
+
+`metropolis_hastings(initial_state, proposal_function=propose_a_move, log_density=compute_probability_of_state,iters=iters, print_every=print_every, tolerance=tolerance, pretty_state=pretty_state)`
+
+  In this block, what we care about are `proposal_function` and and `log_density`.  `proposal_function` constructs the permutations, whereas `log_density` assigns a probability to those permutations.  We will cover `log_density` later, because it uses some slight modifications that make it better for the computer. This code roughly corresponds to our definition of $q(\sigma,\sigma')$:
+  ![q_prob](images/q_prob.png)
+
+* The provided `proposal_function` for the code is given by the method `propose_a_move`, which can be found near the bottom of the `deciphering_utils.py` file.  This example is a simple transposition of two characters from the 56 possible (this code considers all lower and uppercase characters separately).
+
+* The `log_density` method gives what is essentially the log-likelihood of a given state.  It does this via a call to `compute_probability_of_state`, which in turn calls `compute_log_probability_by_counts`, both of which are in the `deciphering_utils.py` file.  `compute_probability_of_state` doesn't do much, so we will examine `compute_log_probability_by_counts`.  In order to understand this, we also need to know how the text is processed.  Currently, whenever you see the variable `transition_matrix` or `transition_probabilities`, that corresponds to a matrix such that the element `transition_matrix[i,j]` is the probabilitiy of character `i` following character `j`.  To know what character corresponds to what index, the author has created the method `char_to_ix`. e.g. suppose we want to know the probability that $a$ followed $b$.  We would simply use `transition_matrix[char_to_ix(a)][char_to_ix(b)]`.  `transition_counts` is similar, but collects the un-normalized counts.  
+
+
+
+
